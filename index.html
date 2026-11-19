@@ -15,14 +15,17 @@ button.s{border:0;border-radius:10px;padding:7px 10px;font-size:13px;background:
 button.p{border:0;border-radius:12px;padding:11px 14px;background:var(--ac);color:#fff;font-size:15px}button:disabled{opacity:.5}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}input{flex:1;min-width:0;padding:11px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:16px;margin-bottom:8px}
 .empty{color:var(--mut);font-size:14px}.err{color:var(--ac);font-size:14px;min-height:18px}.sym{font-weight:700}.sym.m{color:var(--m)}.sym.f{color:var(--f)}
-</style></head><body><main id="app"></main>
+</style></head><body><main id="app"><div class="sub">Завантаження…</div></main>
+<script>window.addEventListener("unhandledrejection",function(e){var a=document.getElementById("app");if(a)a.innerHTML="<div class=\"card\"><b>Помилка:</b><br>"+String(e.reason&&e.reason.message||e.reason).replace(/</g,"&lt;")+"</div>"});window.addEventListener("error",function(e){var a=document.getElementById("app");if(a)a.innerHTML="<div class=\"card\"><b>Помилка на сторінці:</b><br>"+String(e.message).replace(/</g,"&lt;")+"</div>"})</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 // === ВСТАВ СВОЇ ДАНІ (Supabase -> Project Settings -> API). Лише "anon public" ключ, НІКОЛИ не service_role! ===
 const SUPABASE_URL = "https://gzalpvimuhpapwrszyor.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_pp1-QF11m-qKJXGGzE6yEQ_PkdOVl7q";
 // ====================================================================================================
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (typeof supabase === 'undefined') throw new Error('Не завантажилась бібліотека Supabase (перевір інтернет або вимкни блокувальник реклами).');
+if (SUPABASE_URL.includes('ТВІЙ') || SUPABASE_ANON_KEY.includes('ТВІЙ')) throw new Error('У index.html не вставлені SUPABASE_URL і SUPABASE_ANON_KEY (там ще заглушки).');
+const db = supabase.createClient(SUPABASE_URL.trim(), SUPABASE_ANON_KEY.trim());
 const R = { m: { name: 'Валентин', sym: '♂', v: 'обрав' }, f: { name: 'Марина', sym: '♀', v: 'обрала' } }, N = 3;
 const other = r => r === 'm' ? 'f' : 'm';
 const cur = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Kyiv' }).slice(0, 7);
@@ -85,7 +88,7 @@ function listView(r) {
 function commonView() {
   const out = [el('div', { class: 'sub', textContent: cur + ': по ' + N + ' бажання для кожного (по одному обирають обоє + одне випадкове). «Зроблено» відмічає той, для кого це зробили.' }), el('div', { class: 'err', textContent: msg })];
   ['m', 'f'].forEach(r => {
-    const p = pickOf(r), list = monthW(r);
+    const list = monthW(r);
     const c = el('div', { class: 'card' }, el('h2', {}, badge(r), el('span', { class: 'cnt', textContent: list.filter(w => w.done).length + '/' + (pickIds(r).length || N) })),
       el('div', { class: 'sub', textContent: finished(r) ? 'Вибір завершено ✓' : statusLine(r) }));
     list.forEach(w => c.append(el('div', { class: 'w' + (w.done ? ' d' : '') }, el('span', { class: 't', textContent: (w.done ? '✅ ' : '⬜ ') + w.text + (w.done ? '' : '  · ' + tagOf(w)) }),
@@ -104,9 +107,15 @@ function logView() {
 }
 function loginView() {
   const em = el('input', { type: 'email', placeholder: 'Email', autocomplete: 'username' }), pw = el('input', { type: 'password', placeholder: 'Пароль', autocomplete: 'current-password' });
-  const go = async () => { const { error } = await db.auth.signInWithPassword({ email: em.value.trim(), password: pw.value }); if (error) { loginMsg = 'Невірний email або пароль'; render(); } else start(); };
+  const m = el('div', { class: 'err', textContent: loginMsg });
+  const go = async () => {
+    m.textContent = 'Входимо…';
+    const { error } = await db.auth.signInWithPassword({ email: em.value.trim(), password: pw.value });
+    if (error) { loginMsg = 'Не вдалося увійти: ' + error.message; m.textContent = loginMsg; return; }
+    loginMsg = ''; await start();
+  };
   pw.addEventListener('keydown', e => e.key === 'Enter' && go());
-  $app.replaceChildren(el('h1', { textContent: 'Бажання на двох 💞' }), el('div', { class: 'sub', textContent: 'Вхід лише для вас двох' }), em, pw, el('button', { class: 'p', textContent: 'Увійти', onclick: go }), el('div', { class: 'err', textContent: loginMsg }));
+  $app.replaceChildren(el('h1', { textContent: 'Бажання на двох 💞' }), el('div', { class: 'sub', textContent: 'Вхід лише для вас двох' }), em, pw, el('button', { class: 'p', textContent: 'Увійти', onclick: go }), m);
 }
 function render() {
   const f = document.activeElement, keep = f && f.id === 'draft', pos = keep ? f.selectionStart : 0;
@@ -121,11 +130,14 @@ function draw() {
   $app.replaceChildren(el('h1', { textContent: 'Бажання на двох 💞' }), el('div', { class: 'sub' }, 'Ти: ', badge(me), ' ', el('button', { class: 's', textContent: '↻', onclick: load }), ' ', el('button', { class: 's', textContent: 'вийти', onclick: async () => { await db.auth.signOut(); me = null; render(); } })), tabs, ...body);
 }
 async function start() {
-  const { data: { session } } = await db.auth.getSession();
-  if (!session) return render();
-  const { data } = await db.from('members').select('role').maybeSingle();
-  if (!data) { loginMsg = 'Цей акаунт не має доступу.'; await db.auth.signOut(); return render(); }
-  me = data.role; await load();
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) return render();
+    const { data, error } = await db.from('members').select('role').maybeSingle();
+    if (error) { loginMsg = 'Помилка доступу до бази: ' + error.message; await db.auth.signOut(); return render(); }
+    if (!data) { loginMsg = 'Цей акаунт не має доступу (його немає в таблиці members).'; await db.auth.signOut(); return render(); }
+    me = data.role; await load();
+  } catch (e) { me = null; loginMsg = 'Помилка: ' + (e.message || e); render(); }
 }
 start(); setInterval(() => { if (me && !document.hidden && !draft && !(document.activeElement && document.activeElement.id === 'draft')) load(); }, 20000);
 </script></body></html>
