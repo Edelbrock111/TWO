@@ -51,5 +51,5 @@ revoke execute on function make_pick(uuid[]), mark_done(uuid), my_role() from pu
 grant execute on function make_pick(uuid[]), mark_done(uuid), my_role() to authenticated;
 
 -- ЗАМІНИ email: перший — партнер (♂), другий — партнерка (♀)
-insert into members select id, 'm' from auth.users where email = 'valeproffesional@gmail.com';
-insert into members select id, 'f' from auth.users where email = 'valentindubilej@gmail.com';
+insert into members select id, 'm' from auth.users where email = 'valentindubilej@gmail.com';
+insert into members select id, 'f' from auth.users where email = 'marina1405198827@gmail.com';
