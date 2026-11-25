@@ -9,63 +9,113 @@ main{max-width:560px;margin:0 auto;padding:16px}h1{font-size:22px;margin:4px 0 2
 .tabs{display:flex;gap:6px;margin:10px 0}.tabs button{flex:1;padding:9px 2px;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:12px;font-size:13px}.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:12px}.card h2{font-size:16px;margin:0 0 6px;display:flex;justify-content:space-between;gap:8px}
 .cnt,.tag{color:var(--mut);font-weight:400;font-size:13px}.tag{white-space:nowrap}
-.w{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd)}.w.sel{background:var(--ac2);border-radius:8px;padding-left:6px}
+.w{display:flex;align-items:center;gap:8px;padding:8px 0;flex-wrap:wrap}.w.sel{background:var(--ac2);border-radius:8px;padding-left:6px}
 .w .t{flex:1;word-break:break-word}.w.d .t{text-decoration:line-through;color:var(--mut)}
 button.s{border:0;border-radius:10px;padding:7px 10px;font-size:13px;background:var(--ac2);color:var(--ac)}button.ok{background:var(--ok);color:#fff}
 button.p{border:0;border-radius:12px;padding:11px 14px;background:var(--ac);color:#fff;font-size:15px}button:disabled{opacity:.5}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}input{flex:1;min-width:0;padding:11px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:16px;margin-bottom:8px}
+.item{border-top:1px solid var(--bd)}.item .w{border-top:0}.det{padding:0 0 8px;color:var(--mut);font-size:14px;white-space:pre-wrap;word-break:break-word}.tabs{overflow-x:auto}.tabs button{flex:1 0 auto;padding:9px 10px;white-space:nowrap}.toast{position:fixed;left:12px;right:12px;bottom:16px;max-width:520px;margin:0 auto;background:var(--ac);color:#fff;padding:12px 14px;border-radius:12px;box-shadow:0 4px 16px #0004;z-index:9}.drawn{font-size:20px;font-weight:600;margin:8px 0;word-break:break-word}.nt{padding:6px 0;border-top:1px solid var(--bd);font-size:14px}.nt.u{font-weight:600}.mh{font-size:15px;margin:6px 0;color:var(--mut)}.banner{background:var(--ac2);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}input,textarea{flex:1;font-family:inherit;min-width:0;padding:11px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:16px;margin-bottom:8px}
 .empty{color:var(--mut);font-size:14px}.err{color:var(--ac);font-size:14px;min-height:18px}.sym{font-weight:700}.sym.m{color:var(--m)}.sym.f{color:var(--f)}
 </style></head><body><main id="app"><div class="sub">Завантаження…</div></main>
 <script>window.addEventListener("unhandledrejection",function(e){var a=document.getElementById("app");if(a)a.innerHTML="<div class=\"card\"><b>Помилка:</b><br>"+String(e.reason&&e.reason.message||e.reason).replace(/</g,"&lt;")+"</div>"});window.addEventListener("error",function(e){var a=document.getElementById("app");if(a)a.innerHTML="<div class=\"card\"><b>Помилка на сторінці:</b><br>"+String(e.message).replace(/</g,"&lt;")+"</div>"})</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
-// === ВСТАВ СВОЇ ДАНІ (Supabase -> Project Settings -> API). Лише "anon public" ключ, НІКОЛИ не service_role! ===
 const SUPABASE_URL = "https://gzalpvimuhpapwrszyor.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_pp1-QF11m-qKJXGGzE6yEQ_PkdOVl7q";
-// ====================================================================================================
 if (typeof supabase === 'undefined') throw new Error('Не завантажилась бібліотека Supabase (перевір інтернет або вимкни блокувальник реклами).');
-if (SUPABASE_URL.includes('ТВІЙ') || SUPABASE_ANON_KEY.includes('ТВІЙ')) throw new Error('У index.html не вставлені SUPABASE_URL і SUPABASE_ANON_KEY (там ще заглушки).');
 const db = supabase.createClient(SUPABASE_URL.trim(), SUPABASE_ANON_KEY.trim());
 const R = { m: { name: 'Валентин', sym: '♂', v: 'обрав' }, f: { name: 'Марина', sym: '♀', v: 'обрала' } }, N = 3;
+const KEEP = ['draft', 'draftd', 'edt', 'edd', 'hotd'];
 const other = r => r === 'm' ? 'f' : 'm';
-const cur = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Kyiv' }).slice(0, 7);
+const mk = (y, m) => y + '-' + String(m).padStart(2, '0');
 const fmt = s => new Date(s).toLocaleString('uk-UA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-let me = null, wishes = [], picks = {}, tab = 'common', msg = '', loginMsg = '', draft = '';
+const monthLabel = s => new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, 1).toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' });
+let K, cur, T, lastDay, isLast;
+function calc() {
+  const s = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Kyiv' });
+  K = { y: +s.slice(0, 4), m: +s.slice(5, 7), d: +s.slice(8, 10) };
+  lastDay = new Date(K.y, K.m, 0).getDate(); isLast = K.d === lastDay; cur = mk(K.y, K.m);
+  T = isLast ? (K.m === 12 ? mk(K.y + 1, 1) : mk(K.y, K.m + 1)) : cur;
+}
+calc();
+let me = null, wishes = [], picks = {}, tab = 'common', msg = '', loginMsg = '', draft = '', draftD = '', editId = null, editT = '', editD = '';
+const open = new Set();
+let notes = [], seen = null, showNotes = false, subscribed = false, intimate = [], hotErr = '', drawn = null, spinning = false, draftH = '';
+const unread = () => notes.filter(n => !n.read);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function toast(t) { const d = el('div', { class: 'toast', textContent: '🔔 ' + t }); document.body.append(d); setTimeout(() => d.remove(), 6000); }
+async function loadNotes(quiet) {
+  const r = await db.from('notifications').select('*').order('created_at', { ascending: false }).limit(30);
+  if (r.error) return;
+  const sig = a => a.map(n => n.id + n.read).join();
+  const changed = sig(r.data) !== sig(notes);
+  if (seen === null) seen = new Set(r.data.map(n => n.id));
+  else r.data.filter(n => !n.read && !seen.has(n.id)).forEach(n => { toast(n.text); try { if ('Notification' in window && Notification.permission === 'granted') new Notification('Бажання на двох 💞', { body: n.text }); } catch (e) {} });
+  r.data.forEach(n => seen.add(n.id)); notes = r.data;
+  if (changed && !quiet) render();
+}
+async function markRead() { const ids = unread().map(n => n.id); if (ids.length) { await db.from('notifications').update({ read: true }).in('id', ids); await loadNotes(); } }
 const $app = document.getElementById('app');
 function el(t, p, ...k) { const e = document.createElement(t); for (const a in (p || {})) { if (a === 'class') e.className = p[a]; else if (a.startsWith('on')) e.addEventListener(a.slice(2), p[a]); else e[a] = p[a]; } k.flat().forEach(c => e.append(c)); return e; }
 const badge = r => el('span', { class: 'sym ' + r, textContent: R[r].sym + ' ' + R[r].name });
-const pk = r => picks[r] || null;
-const pickIds = r => { const p = pk(r); return p ? [p.owner_pick, p.partner_pick, p.random_pick].filter(Boolean) : []; };
-const monthW = r => pickIds(r).map(i => wishes.find(w => w.id === i)).filter(Boolean);
-const inMonth = w => pickIds(w.by_role).includes(w.id);
-const finished = r => !!(pk(r) && pk(r).random_pick);
-const myPickDone = r => { const p = pk(r); return !!p && !!(r === me ? p.owner_pick : p.partner_pick); };
-const tagOf = w => { const p = pk(w.by_role); if (!p) return ''; if (p.random_pick === w.id) return '🎲 випадкове'; if (p.owner_pick === w.id) return '📌 ' + R[w.by_role].v + ' ' + R[w.by_role].name; if (p.partner_pick === w.id) return '📌 ' + R[other(w.by_role)].v + ' ' + R[other(w.by_role)].name; return ''; };
-const statusLine = r => { const p = pk(r); return R[r].name + ': ' + (p && p.owner_pick ? '✓' : '⏳') + ' · ' + R[other(r)].name + ': ' + (p && p.partner_pick ? '✓' : '⏳') + ' · 🎲 випадкове — після двох виборів'; };
+const pr = (mo, r) => (picks[mo] || {})[r] || null;
+const idsOf = p => p ? [p.owner_pick, p.partner_pick, p.random_pick].filter(Boolean) : [];
+const finishedSet = r => !!(pr(T, r) && pr(T, r).random_pick);
+const isPick = () => !(finishedSet('m') && finishedSet('f')) && (isLast || K.d <= 7 || !!(picks[T] && (picks[T].m || picks[T].f)));
+const rowOf = w => { for (const mo of new Set([cur, T])) { const p = pr(mo, w.by_role); if (p && idsOf(p).includes(w.id)) return p; } return null; };
+const inMonth = w => !!rowOf(w);
+const busyCur = w => cur !== T && idsOf(pr(cur, w.by_role)).includes(w.id);
+const myPickDone = r => { const p = pr(T, r); return !!p && !!(r === me ? p.owner_pick : p.partner_pick); };
+const tagOf = w => { const p = rowOf(w); if (!p) return ''; if (p.random_pick === w.id) return '🎲 випадкове'; if (p.owner_pick === w.id) return '📌 ' + R[w.by_role].v + ' ' + R[w.by_role].name; if (p.partner_pick === w.id) return '📌 ' + R[other(w.by_role)].v + ' ' + R[other(w.by_role)].name; return ''; };
+const statusLine = r => { const p = pr(T, r); return R[r].name + ': ' + (p && p.owner_pick ? '✓' : '⏳') + ' · ' + R[other(r)].name + ': ' + (p && p.partner_pick ? '✓' : '⏳') + ' · 🎲 випадкове — після двох виборів'; };
 const err = t => { msg = t; render(); };
 
 async function load() {
+  calc();
   const a = await db.from('wishes').select('*').order('created_at');
-  const b = await db.from('picks').select('*').eq('month', cur);
+  const b = await db.from('picks').select('*').in('month', [...new Set([cur, T])]);
   if (a.error || b.error) return err('Помилка завантаження: ' + (a.error || b.error).message);
-  wishes = a.data; picks = {}; b.data.forEach(p => picks[p.for_role] = p); render();
+  const h = await db.from('intimate_wishes').select('*').order('created_at');
+  intimate = h.error ? [] : h.data; hotErr = h.error ? 'Цей розділ ще не налаштований: виконай migration4.sql у Supabase.' : '';
+  await loadNotes(true);
+  wishes = a.data; picks = {}; b.data.forEach(p => { (picks[p.month] = picks[p.month] || {})[p.for_role] = p; }); render();
 }
 async function act(p) { const { error } = await p; msg = error ? (error.code === '23505' ? 'Таке бажання вже є (або вже виконане) 🙂' : error.message) : ''; await load(); }
-const addWish = t => { t = t.trim(); if (t) act(db.from('wishes').insert({ text: t, by_role: me })); };
 const choose = w => { if (confirm('Обрати «' + w.text + '»? Змінити вибір буде не можна.')) act(db.rpc('choose_wish', { wid: w.id })); };
 
+function item(w, main, extras) {
+  const has = !!(w.details && w.details.trim());
+  const row = el('div', { class: 'w' + (w.done ? ' d' : '') }, el('span', { class: 't', textContent: main }), extras || []);
+  if (has) row.append(el('button', { class: 's', textContent: open.has(w.id) ? 'Згорнути ▴' : 'Детальніше ▾', onclick: () => { open.has(w.id) ? open.delete(w.id) : open.add(w.id); render(); } }));
+  const box = el('div', { class: 'item' }, row);
+  if (has && open.has(w.id)) box.append(el('div', { class: 'det', textContent: w.details }));
+  return box;
+}
+function editBox(w) {
+  const t = el('input', { id: 'edt', value: editT, maxLength: 200 }), d = el('textarea', { id: 'edd', value: editD, maxLength: 2000, rows: 4, placeholder: 'Уточнення (необов’язково)' });
+  t.addEventListener('input', () => { editT = t.value; }); d.addEventListener('input', () => { editD = d.value; });
+  const save = () => { const text = editT.trim(); if (!text) return err('Текст бажання не може бути порожнім'); editId = null; act(db.from('wishes').update({ text, details: editD.trim() || null }).eq('id', w.id)); };
+  return el('div', { class: 'item' }, el('div', { class: 'row' }, t), el('div', { class: 'row' }, d), el('div', { class: 'row' }, el('button', { class: 'p', textContent: 'Зберегти', onclick: save }), el('button', { class: 's', textContent: 'Скасувати', onclick: () => { editId = null; render(); } })));
+}
+function banner() {
+  if (isPick()) return el('div', { class: 'banner', textContent: '🎯 Етап вибору на ' + monthLabel(T) + ' — поки вибір не завершено, бажання змінювати не можна (якщо в тебе менше ' + N + ' бажань — додавати можна).' });
+  return el('div', { class: 'banner', textContent: '✏️ Зараз можна додавати й редагувати бажання. День X — останній день місяця (' + lastDay + '-те число): тоді відкриється вибір на наступний місяць' + (K.d <= lastDay ? ' (ще ' + (lastDay - K.d) + ' дн.).' : '.') });
+}
+
 function listView(r) {
-  const out = [];
-  if (r === me) {
+  const out = [banner()], editing = !isPick();
+  const list = wishes.filter(w => w.by_role === r && !w.done);
+  if (r === me && (editing || list.length < N)) {
     const inp = el('input', { id: 'draft', placeholder: 'Нове бажання…', maxLength: 200, value: draft });
-    inp.addEventListener('input', () => { draft = inp.value; });
-    const go = () => { const v = draft; draft = ''; inp.value = ''; addWish(v); };
+    const det = el('textarea', { id: 'draftd', placeholder: 'Уточнення (необов’язково): що саме ти хочеш, як це уявляєш…', maxLength: 2000, rows: 3, value: draftD });
+    inp.addEventListener('input', () => { draft = inp.value; }); det.addEventListener('input', () => { draftD = det.value; });
+    const go = () => { const text = draft.trim(), d = draftD.trim(); if (!text) return; draft = ''; draftD = ''; inp.value = ''; det.value = ''; act(db.from('wishes').insert({ text, by_role: me, details: d || null })); };
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
-    out.push(el('div', { class: 'card' }, el('div', { class: 'row' }, inp, el('button', { class: 'p', textContent: 'Додати', onclick: go }))));
+    out.push(el('div', { class: 'card' }, el('div', { class: 'row' }, inp), el('div', { class: 'row' }, det), el('div', { class: 'row' }, el('button', { class: 'p', textContent: 'Додати', onclick: go }))));
   }
-  const avail = wishes.filter(w => w.by_role === r && !w.done).length;
-  const canPick = !finished(r) && !myPickDone(r) && avail >= N;
-  if (!finished(r)) {
+  const avail = list.filter(w => !busyCur(w)).length;
+  const canPick = !editing && !finishedSet(r) && !myPickDone(r) && avail >= N;
+  if (!editing && !finishedSet(r)) {
     const c = el('div', { class: 'card' }, el('h2', { textContent: 'Вибір на цей місяць' }), el('div', { class: 'sub', textContent: statusLine(r) }));
     if (avail < N) c.append(el('div', { class: 'empty', textContent: 'Для вибору потрібно щонайменше ' + N + ' невиконаних бажання (зараз ' + avail + ').' }));
     else if (!myPickDone(r)) c.append(el('div', { textContent: r === me ? 'Твій хід: обери 1 своє бажання на місяць 👇' : 'Твій хід: обери 1 бажання, яке ти зробиш для ' + R[r].name + ' 👇' }));
@@ -73,27 +123,31 @@ function listView(r) {
     out.push(c);
   }
   out.push(el('div', { class: 'err', textContent: msg }));
-  const list = wishes.filter(w => w.by_role === r);
   const card = el('div', { class: 'card' }, el('h2', {}, badge(r), el('span', { class: 'cnt', textContent: list.length })));
   if (!list.length) card.append(el('div', { class: 'empty', textContent: 'Порожньо.' }));
   list.forEach(w => {
-    const row = el('div', { class: 'w' + (w.done ? ' d' : '') }, el('span', { class: 't', textContent: w.text }),
-      w.done ? el('span', { class: 'tag', textContent: '✓ виконано' }) : el('span', { class: 'tag', textContent: tagOf(w) }));
-    if (canPick && !w.done && !inMonth(w)) row.append(el('button', { class: 's', textContent: 'Обрати', onclick: () => choose(w) }));
-    if (r === me && !w.done && !inMonth(w)) row.append(el('button', { class: 's', textContent: '✕', onclick: () => confirm('Видалити це бажання?') && act(db.from('wishes').delete().eq('id', w.id)) }));
-    card.append(row);
+    if (editId === w.id && editing) return card.append(editBox(w));
+    const btns = [el('span', { class: 'tag', textContent: tagOf(w) })];
+    if (canPick && !inMonth(w)) btns.push(el('button', { class: 's', textContent: 'Обрати', onclick: () => choose(w) }));
+    if (r === me && editing && !inMonth(w)) btns.push(
+      el('button', { class: 's', textContent: '✎', onclick: () => { editId = w.id; editT = w.text; editD = w.details || ''; render(); } }),
+      el('button', { class: 's', textContent: '✕', onclick: () => confirm('Видалити це бажання?') && act(db.from('wishes').delete().eq('id', w.id)) }));
+    card.append(item(w, w.text, btns));
   });
   return [...out, card];
 }
 function commonView() {
-  const out = [el('div', { class: 'sub', textContent: cur + ': по ' + N + ' бажання для кожного (по одному обирають обоє + одне випадкове). «Зроблено» відмічає той, для кого це зробили.' }), el('div', { class: 'err', textContent: msg })];
-  ['m', 'f'].forEach(r => {
-    const list = monthW(r);
-    const c = el('div', { class: 'card' }, el('h2', {}, badge(r), el('span', { class: 'cnt', textContent: list.filter(w => w.done).length + '/' + (pickIds(r).length || N) })),
-      el('div', { class: 'sub', textContent: finished(r) ? 'Вибір завершено ✓' : statusLine(r) }));
-    list.forEach(w => c.append(el('div', { class: 'w' + (w.done ? ' d' : '') }, el('span', { class: 't', textContent: (w.done ? '✅ ' : '⬜ ') + w.text + (w.done ? '' : '  · ' + tagOf(w)) }),
-      w.done ? el('span', { class: 'tag', textContent: fmt(w.done_at) }) : r === me ? el('button', { class: 's ok', textContent: '✓ Зроблено', onclick: () => act(db.rpc('mark_done', { wid: w.id })) }) : '')));
-    out.push(c);
+  const out = [banner(), el('div', { class: 'sub', textContent: 'По ' + N + ' бажання для кожного (по одному обирають обоє + одне випадкове). «Зроблено» відмічає той, для кого це зробили.' }), el('div', { class: 'err', textContent: msg })];
+  [...new Set([cur, T])].forEach(mo => {
+    out.push(el('h2', { class: 'mh', textContent: monthLabel(mo) }));
+    ['m', 'f'].forEach(r => {
+      const p = pr(mo, r), list = idsOf(p).map(i => wishes.find(w => w.id === i)).filter(Boolean);
+      const c = el('div', { class: 'card' }, el('h2', {}, badge(r), el('span', { class: 'cnt', textContent: list.filter(w => w.done).length + '/' + (list.length || N) })),
+        el('div', { class: 'sub', textContent: p && p.random_pick ? 'Вибір завершено ✓' : mo === T && isPick() ? statusLine(r) : 'Вибір ще не почався' }));
+      list.forEach(w => c.append(item(w, (w.done ? '✅ ' : '⬜ ') + w.text + (w.done ? '' : '  · ' + tagOf(w)),
+        w.done ? el('span', { class: 'tag', textContent: fmt(w.done_at) }) : r === me ? el('button', { class: 's ok', textContent: '✓ Зроблено', onclick: () => act(db.rpc('mark_done', { wid: w.id })) }) : '')));
+      out.push(c);
+    });
   });
   return out;
 }
@@ -102,8 +156,50 @@ function logView() {
   const card = el('div', { class: 'card' }, el('h2', {}, el('span', { textContent: 'Журнал виконаного 💛' }), el('span', { class: 'cnt', textContent: 'усього ' + d.length })),
     el('div', { class: 'sub' }, badge('m'), ' отримав: ' + c('m') + ' · ', badge('f'), ' отримала: ' + c('f')));
   if (!d.length) card.append(el('div', { class: 'empty', textContent: 'Тут з’являтимуться виконані бажання з часом відмітки.' }));
-  d.forEach(w => card.append(el('div', { class: 'w' }, badge(w.by_role), el('span', { class: 't', textContent: w.text }), el('span', { class: 'tag', textContent: fmt(w.done_at) }))));
+  d.forEach(w => card.append(item(w, w.text, [badge(w.by_role), el('span', { class: 'tag', textContent: fmt(w.done_at) })])));
   return [card];
+}
+
+async function spin() {
+  const pool = intimate.filter(w => !w.done);
+  if (!pool.length || spinning) return;
+  spinning = true;
+  for (let i = 0; i < 12; i++) { drawn = pool[Math.floor(Math.random() * pool.length)]; render(); await sleep(50 + i * 10); }
+  spinning = false; render();
+}
+function hotView() {
+  if (hotErr) return [el('div', { class: 'card', textContent: hotErr })];
+  const inp = el('input', { id: 'hotd', placeholder: 'Нове бажання…', maxLength: 300, value: draftH });
+  inp.addEventListener('input', () => { draftH = inp.value; });
+  const go = () => { const t = draftH.trim(); if (!t) return; draftH = ''; inp.value = ''; act(db.from('intimate_wishes').insert({ text: t, by_role: me })); };
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  const pool = intimate.filter(w => !w.done), fin = intimate.filter(w => w.done).sort((a, b) => b.done_at.localeCompare(a.done_at));
+  const out = [el('div', { class: 'card' }, el('h2', { textContent: '🔥 Додати бажання' }), el('div', { class: 'row' }, inp, el('button', { class: 'p', textContent: 'Додати', onclick: go })), el('div', { class: 'err', textContent: msg }))];
+  const g = el('div', { class: 'card' }, el('h2', { textContent: '🎲 Міні-гра: випадкове бажання' }));
+  if (!pool.length) g.append(el('div', { class: 'empty', textContent: 'Додайте хоч одне бажання, щоб грати.' }));
+  else {
+    if (drawn && pool.some(x => x.id === drawn.id)) g.append(el('div', { class: 'drawn', textContent: drawn.text }), el('div', { class: 'sub' }, 'додав(ла): ', badge(drawn.by_role)));
+    const row = el('div', { class: 'row' }, el('button', { class: 'p', textContent: drawn ? '🎲 Ще раз' : '🎲 Крутити', disabled: spinning, onclick: spin }));
+    if (drawn && !spinning && pool.some(x => x.id === drawn.id)) row.append(el('button', { class: 's ok', textContent: '✅ Виконали', onclick: () => { const id = drawn.id; drawn = null; act(db.rpc('intimate_done', { wid: id })); } }));
+    g.append(row);
+  }
+  out.push(g);
+  const l = el('div', { class: 'card' }, el('h2', {}, el('span', { textContent: 'Усі бажання' }), el('span', { class: 'cnt', textContent: pool.length })));
+  if (!pool.length) l.append(el('div', { class: 'empty', textContent: 'Порожньо.' }));
+  pool.forEach(w => l.append(el('div', { class: 'item' }, el('div', { class: 'w' }, badge(w.by_role), el('span', { class: 't', textContent: w.text }),
+    w.by_role === me ? el('button', { class: 's', textContent: '✕', onclick: () => confirm('Видалити це бажання?') && act(db.from('intimate_wishes').delete().eq('id', w.id)) }) : ''))));
+  out.push(l);
+  if (fin.length) { const f = el('div', { class: 'card' }, el('h2', {}, el('span', { textContent: 'Виконано 💛' }), el('span', { class: 'cnt', textContent: fin.length }))); fin.forEach(w => f.append(el('div', { class: 'item' }, el('div', { class: 'w d' }, badge(w.by_role), el('span', { class: 't', textContent: w.text }), el('span', { class: 'tag', textContent: fmt(w.done_at) }))))); out.push(f); }
+  return out;
+}
+function notesPanel() {
+  const c = el('div', { class: 'card' }, el('h2', { textContent: '🔔 Сповіщення' }));
+  if (!notes.length) c.append(el('div', { class: 'empty', textContent: 'Поки нічого.' }));
+  notes.forEach(n => c.append(el('div', { class: 'nt' + (n.read ? '' : ' u') }, (n.read ? '' : '● ') + n.text + ' · ' + fmt(n.created_at))));
+  const row = el('div', { class: 'row' });
+  if (unread().length) row.append(el('button', { class: 's', textContent: 'Позначити прочитаними', onclick: markRead }));
+  if ('Notification' in window && Notification.permission === 'default') row.append(el('button', { class: 's', textContent: 'Увімкнути сповіщення в браузері', onclick: async () => { try { await Notification.requestPermission(); } catch (e) {} render(); } }));
+  c.append(row); return c;
 }
 function loginView() {
   const em = el('input', { type: 'email', placeholder: 'Email', autocomplete: 'username' }), pw = el('input', { type: 'password', placeholder: 'Пароль', autocomplete: 'current-password' });
@@ -118,16 +214,16 @@ function loginView() {
   $app.replaceChildren(el('h1', { textContent: 'Бажання на двох 💞' }), el('div', { class: 'sub', textContent: 'Вхід лише для вас двох' }), em, pw, el('button', { class: 'p', textContent: 'Увійти', onclick: go }), m);
 }
 function render() {
-  const f = document.activeElement, keep = f && f.id === 'draft', pos = keep ? f.selectionStart : 0;
+  const f = document.activeElement, keep = f && KEEP.includes(f.id) ? f.id : null, pos = keep ? f.selectionStart : 0;
   draw();
-  if (keep) { const i = document.getElementById('draft'); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} } }
+  if (keep) { const i = document.getElementById(keep); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} } }
 }
 function draw() {
   if (!me) return loginView();
-  const T = [['common', 'Спільне'], ['m', R.m.sym + ' ' + R.m.name], ['f', R.f.sym + ' ' + R.f.name], ['log', 'Журнал']];
-  const tabs = el('div', { class: 'tabs' }, T.map(([k, t]) => el('button', { class: tab === k ? 'on' : '', textContent: t, onclick: () => { tab = k; msg = ''; render(); } })));
-  const body = tab === 'common' ? commonView() : tab === 'log' ? logView() : listView(tab);
-  $app.replaceChildren(el('h1', { textContent: 'Бажання на двох 💞' }), el('div', { class: 'sub' }, 'Ти: ', badge(me), ' ', el('button', { class: 's', textContent: '↻', onclick: load }), ' ', el('button', { class: 's', textContent: 'вийти', onclick: async () => { await db.auth.signOut(); me = null; render(); } })), tabs, ...body);
+  const T = [['common', 'Спільне'], ['m', R.m.sym + ' ' + R.m.name], ['f', R.f.sym + ' ' + R.f.name], ['hot', '🔥 Інтим'], ['log', 'Журнал']];
+  const tabs = el('div', { class: 'tabs' }, T.map(([k, t]) => el('button', { class: tab === k ? 'on' : '', textContent: t, onclick: () => { tab = k; msg = ''; editId = null; render(); } })));
+  const body = tab === 'common' ? commonView() : tab === 'log' ? logView() : tab === 'hot' ? hotView() : listView(tab);
+  $app.replaceChildren(el('h1', { textContent: 'Бажання на двох 💞' }), el('div', { class: 'sub' }, 'Ти: ', badge(me), ' ', el('button', { class: 's', textContent: '↻', onclick: load }), ' ', el('button', { class: 's', textContent: '🔔' + (unread().length ? ' ' + unread().length : ''), onclick: () => { showNotes = !showNotes; render(); } }), ' ', el('button', { class: 's', textContent: 'вийти', onclick: async () => { try { db.removeAllChannels(); } catch (e) {} subscribed = false; seen = null; notes = []; await db.auth.signOut(); me = null; render(); } })), showNotes ? notesPanel() : '', tabs, ...body);
 }
 async function start() {
   try {
@@ -137,7 +233,9 @@ async function start() {
     if (error) { loginMsg = 'Помилка доступу до бази: ' + error.message; await db.auth.signOut(); return render(); }
     if (!data) { loginMsg = 'Цей акаунт не має доступу (його немає в таблиці members).'; await db.auth.signOut(); return render(); }
     me = data.role; await load();
+    if (!subscribed) { subscribed = true; try { db.channel('notes').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, () => loadNotes()).subscribe(); } catch (e) {} }
   } catch (e) { me = null; loginMsg = 'Помилка: ' + (e.message || e); render(); }
 }
-start(); setInterval(() => { if (me && !document.hidden && !draft && !(document.activeElement && document.activeElement.id === 'draft')) load(); }, 20000);
+start(); setInterval(() => { if (me && !document.hidden) loadNotes(); }, 15000);
+setInterval(() => { if (me && !document.hidden && !draft && !draftD && editId === null && !draftH && !KEEP.includes((document.activeElement || {}).id)) load(); }, 20000);
 </script></body></html>
